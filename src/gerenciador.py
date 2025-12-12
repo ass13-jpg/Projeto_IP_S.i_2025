@@ -3,18 +3,22 @@ import random
 import os
 from src.configuracoes import *
 
-# IMPORTAÇÕES DE MODULOS 
+# IMPORTAÇÕES DE CLASSES (MODULOS)
 from src.atores.jogador import Jogador
 from src.atores.obstaculo import Obstaculo
 from src.itens.coletavel import Item
 
 class GerenciadorJogo:
+    """
+    Classe MÃE.
+    Gerencia Score, Vidas, Regras de Café (5x) e Mudança de Mundo.
+    """
     def __init__(self):
         self.fonte = pygame.font.SysFont('Arial', 30, bold=True)
         self.fonte_go = pygame.font.SysFont('Arial', 60, bold=True)
-        self.personagem_selecionado = "wilque"
+        
+        self.personagem_selecionado = "wilque" 
         self.carregar_fundos()
-        # Inicia o jogo zerado
         self.resetar_jogo()
 
     def resetar_jogo(self, personagem=None):
@@ -22,20 +26,21 @@ class GerenciadorJogo:
         if personagem:
             self.personagem_selecionado = personagem
 
-        self.pontos_score = 0       # Score Principal 
-        self.pontos_waffles = 0     # Contador interno
-        self.vidas = VIDAS_INICIAIS # 10 Vidas
+        self.pontos_score = 0           
+        self.ultimo_score_lanterna = 0  
+        
+        self.vidas = VIDAS_INICIAIS     
         self.game_over = False
         
-        self.conta_cafe = 0
-        self.conta_luzes = 0
+        self.conta_cafe = 0    # Conta total de cafés pegos
+        self.conta_luzes = 0   
+        
         self.mundo_invertido = False 
         self.velocidade_atual = VELOCIDADE_NORMAL
         self.posicao_fundo = 0 
-        self.momento_entrada_invertido = 0
-        self.cooldown_spawn = 0
+        self.momento_entrada_invertido = 0 
+        self.cooldown_spawn = 0         
         
-        # Recria os grupos de sprites
         self.jogador = Jogador(self.personagem_selecionado)
         self.grupo_jogador = pygame.sprite.GroupSingle(self.jogador)
         self.grupo_obstaculos = pygame.sprite.Group()
@@ -54,37 +59,56 @@ class GerenciadorJogo:
             self.tem_fundo = False
 
     def alternar_mundo(self):
+        """Troca a dificuldade e o visual entre Normal e Invertido"""
         self.mundo_invertido = not self.mundo_invertido
         if self.mundo_invertido:
             self.velocidade_atual = VELOCIDADE_RAPIDA
             self.momento_entrada_invertido = pygame.time.get_ticks()
         else:
             self.velocidade_atual = VELOCIDADE_NORMAL
-        self.conta_luzes = 0 
+            
+        self.conta_luzes = 0
 
     def atualizar(self):
+        """Loop lógico (60 FPS)"""
         if self.game_over: return
         
         self.grupo_jogador.update()
         self.grupo_obstaculos.update()
         self.grupo_itens.update()
 
-        # Espaçamento entre Inimigos
+        # DIFICULDADE DINÂMICA
+        # Mais inimigos no mundo invertido
+        if self.mundo_invertido:
+            chance_inimigo = 4   # 4%
+            tempo_espera = 40    # Rápido
+        else:
+            chance_inimigo = 1   # 1%
+            tempo_espera = 60    # Normal
+
+        # Geração de Obstáculos
         if self.cooldown_spawn > 0: self.cooldown_spawn -= 1
         
         if self.cooldown_spawn == 0:
-            if random.randint(0, 100) < 1: 
+            if random.randint(0, 100) < chance_inimigo: 
                 self.grupo_obstaculos.add(Obstaculo(self.velocidade_atual))
-                self.cooldown_spawn = 60 # Bloqueia novos monstros por 1s
+                self.cooldown_spawn = tempo_espera
 
+        # Geração de Itens 
+        # 1. Aleatória
         if random.randint(0, 100) < 2: 
             tipo = random.choice(["waffle", "waffle", "cafe", "luzes"])
             self.grupo_itens.add(Item(self.velocidade_atual, tipo))
 
-        # Ida para o Invertido (10 Luzes)
-        if self.conta_luzes >= 10 and not self.mundo_invertido: self.alternar_mundo()
+        # 2. Bônus por Score (Lanterna extra a cada 30 pontos)
+        if self.pontos_score >= self.ultimo_score_lanterna + 30:
+            self.grupo_itens.add(Item(self.velocidade_atual, "luzes"))
+            self.ultimo_score_lanterna = self.pontos_score 
+
+        # Regras de Mudança de Mundo
+        if self.conta_luzes >= 10 and not self.mundo_invertido: 
+            self.alternar_mundo()
         
-        # Volta do Invertido (30 Segundos)
         if self.mundo_invertido:
             agora = pygame.time.get_ticks()
             if agora - self.momento_entrada_invertido > TEMPO_MUNDO_INVERTIDO:
@@ -92,26 +116,39 @@ class GerenciadorJogo:
 
         self.verificar_colisoes()
 
-        # Scroll do Fundo
         self.posicao_fundo -= self.velocidade_atual * 0.5 
         if self.posicao_fundo <= -LARGURA_TELA: self.posicao_fundo = 0
 
     def verificar_colisoes(self):
-        # Colisão com Inimigos
+        """Gerencia colisão com Inimigos e Itens"""
+        
+        # 1. Colisão com Obstáculos
         if pygame.sprite.spritecollide(self.jogador, self.grupo_obstaculos, True):
             if not self.jogador.tem_escudo:
+                # Sem escudo: Perde vida
                 self.jogador.vidas -= 1
                 if self.jogador.vidas <= 0: self.game_over = True
-            else: self.jogador.tem_escudo = False 
+            else: 
+                # Com escudo: Perde o escudo, mas salva a vida
+                self.jogador.tem_escudo = False
+                print("Escudo QUEBRADO! (Protegeu 1 vida)") 
         
-        # Colisão com Itens
-        itens = pygame.sprite.spritecollide(self.jogador, self.grupo_itens, True)
-        for item in itens:
+        # 2. Colisão com Itens
+        itens_coletados = pygame.sprite.spritecollide(self.jogador, self.grupo_itens, True)
+        for item in itens_coletados:
             if item.tipo == "waffle": 
-                # Score aumenta ao pegar waffles
-                self.pontos_score += (20 if self.mundo_invertido else 10)
-            elif item.tipo == "cafe": self.jogador.tem_escudo = True
-            elif item.tipo == "luzes": self.conta_luzes += 1
+                self.pontos_score += 1 
+            
+            elif item.tipo == "cafe": 
+                self.conta_cafe += 1
+                # NOVA LÓGICA DO CAFÉ 
+                # Só ativa o escudo se o total de cafés for múltiplo de 5 (5, 10, 15...)
+                if self.conta_cafe > 0 and self.conta_cafe % 5 == 0:
+                    self.jogador.tem_escudo = True
+                    print(f"ESCUDO ATIVADO! (Pegou {self.conta_cafe} cafés)")
+            
+            elif item.tipo == "luzes": 
+                self.conta_luzes += 1 
 
     def desenhar(self, tela):
         # 1. Fundo
@@ -122,26 +159,32 @@ class GerenciadorJogo:
         else:
             tela.fill(VERMELHO_MUNDO if self.mundo_invertido else VERDE_CIN)
 
-        # 2. Objetos
+        # 2. Sprites
         self.grupo_jogador.draw(tela)
         self.grupo_obstaculos.draw(tela)
         self.grupo_itens.draw(tela)
 
-        # 3. HUD (Texto Superior Esquerdo)
-        texto = f"SCORE: {self.pontos_score} | VIDAS: {self.jogador.vidas}"
+        # Só desenha o círculo se o escudo estiver ATIVO (ou seja, completou 5 cafés)
+        if self.jogador.tem_escudo:
+            centro = self.jogador.rect.center
+            pygame.draw.circle(tela, MARROM, centro, 90, 5)
+
+        # 3. HUD (Texto)
+        texto = f"SCORE: {self.pontos_score} | VIDAS: {self.jogador.vidas} | LUZES: {self.conta_luzes}/10"
+        
         sombra = self.fonte.render(texto, True, PRETO)
         frente = self.fonte.render(texto, True, BRANCO)
         
-        tela.blit(sombra, (23, 23)) # Sombra
-        tela.blit(frente, (20, 20)) # Texto
+        tela.blit(sombra, (23, 23))
+        tela.blit(frente, (20, 20))
         
-        # 4. Timer Central (Só no invertido)
+        # 4. Timer Central (Só no mundo invertido)
         if self.mundo_invertido:
             tempo = (TEMPO_MUNDO_INVERTIDO - (pygame.time.get_ticks() - self.momento_entrada_invertido)) // 1000
             txt_timer = self.fonte.render(f"RETORNO EM: {tempo}s", True, BRANCO)
             tela.blit(txt_timer, (LARGURA_TELA//2-100, 100))
 
-        # 5. Tela de Game Over
+        # 5. Game Over
         if self.game_over:
             s = pygame.Surface((LARGURA_TELA, ALTURA_TELA))
             s.set_alpha(200); s.fill(PRETO); tela.blit(s, (0,0))
