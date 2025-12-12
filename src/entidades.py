@@ -2,27 +2,41 @@ import pygame
 import random
 import os
 
-# --- CORREÇÃO DE IMPORTAÇÃO (Igual ao Gerenciador) ---
 try:
     from src.configuracoes import *
 except ModuleNotFoundError:
     from configuracoes import *
-# -----------------------------------------------------
 
 class Entidade(pygame.sprite.Sprite):
     def __init__(self, x, y, largura, altura, nome_imagem):
         super().__init__()
-        caminho_completo = os.path.join('assets', 'imagens', nome_imagem)
+        
+        # --- LÓGICA DE PASTAS (CORRIGIDA) ---
+        dir_atual = os.path.dirname(os.path.abspath(__file__))
+        dir_raiz = os.path.dirname(dir_atual)
+        
+        # Se for um dos personagens, busca na pasta 'personagens'
+        if nome_imagem.lower() in ['wilque.png', 'ellen.png']:
+            pasta = 'personagens'
+        else:
+            # Itens e Inimigos ficam na pasta 'imagens'
+            pasta = 'imagens'
+            
+        caminho_completo = os.path.join(dir_raiz, 'assets', pasta, nome_imagem)
+        # ------------------------------------
+        
         try:
             imagem_original = pygame.image.load(caminho_completo).convert_alpha()
             self.image = pygame.transform.scale(imagem_original, (largura, altura))
         except Exception:
+            # Fallback de cor se falhar
             self.image = pygame.Surface((largura, altura))
-            if 'jogador' in nome_imagem: cor = AZUL
-            elif 'demodog' in nome_imagem or 'cadeira' in nome_imagem: cor = PRETO
-            elif 'cafe' in nome_imagem: cor = MARROM
-            elif 'luzes' in nome_imagem: cor = VERDE_LUZ
-            else: cor = AMARELO
+            if 'wilque' in nome_imagem: cor = (0, 0, 255)
+            elif 'ellen' in nome_imagem: cor = (255, 105, 180)
+            elif 'demodog' in nome_imagem or 'cadeira' in nome_imagem: cor = (0, 0, 0)
+            elif 'cafe' in nome_imagem: cor = (100, 50, 0)
+            elif 'luzes' in nome_imagem: cor = (0, 255, 0)
+            else: cor = (255, 255, 0)
             self.image.fill(cor)
         
         self.rect = self.image.get_rect()
@@ -33,13 +47,17 @@ class Entidade(pygame.sprite.Sprite):
     def update(self):
         pass
 
+# --- Classes Filhas (Sem alterações necessárias) ---
 class Jogador(Entidade):
-    def __init__(self):
-        super().__init__(100, NIVEL_CHAO - 160, 100, 160, 'jogador.png') 
+    def __init__(self, nome_personagem="wilque"):
+        if nome_personagem == "wilque": nome_arquivo = "wilque.png"
+        else: nome_arquivo = "ellen.png"
+        super().__init__(100, NIVEL_CHAO - 160, 100, 160, nome_arquivo) 
         self.velocidade_y = 0
         self.esta_pulando = False
         self.vidas = 3
         self.tem_escudo = False
+        self.nome = nome_personagem
 
     def pular(self):
         if not self.esta_pulando:
@@ -65,8 +83,7 @@ class Obstaculo(Entidade):
 
     def update(self):
         self.rect.x -= self.velocidade
-        if self.rect.right < 0:
-            self.kill()
+        if self.rect.right < 0: self.kill()
 
 class Item(Entidade):
     def __init__(self, velocidade_atual, tipo_item):
@@ -80,5 +97,4 @@ class Item(Entidade):
 
     def update(self):
         self.rect.x -= self.velocidade
-        if self.rect.right < 0:
-            self.kill()
+        if self.rect.right < 0: self.kill()
