@@ -1,14 +1,21 @@
 from src.configuracoes import *
 from src.base.entidade import Entidade
+from src.assets_paths import*
 
 class Jogador(Entidade):
     """
     Controla o aluno. Gerencia Pulo Duplo, Gravidade e Vidas.
     """
     def __init__(self, nome_personagem="wilque"):
-        # Define qual arquivo PNG carregar
-        arquivo = "wilque.png" if nome_personagem == "wilque" else "ellen.png"
         
+        # --- Define qual arquivo PNG carregar usando a CONSTANTE ---
+        if nome_personagem == "wilque":
+            # Usa a constante de texto 'wilque' e adiciona '.png'
+            arquivo = IMAGEM_BASE_WILQUE + ".png" 
+        else:
+            # Mantém 'ellen.png' se não tiver a constante dela
+            arquivo = IMAGEM_BASE_ELLEN + ".png"
+            
         super().__init__(100, NIVEL_CHAO - 160, 100, 160, arquivo)
         
         self.velocidade_y = 0

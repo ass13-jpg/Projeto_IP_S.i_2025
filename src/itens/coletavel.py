@@ -1,5 +1,6 @@
 import random
 from src.configuracoes import *
+from src.assets_paths import *
 from src.base.entidade import Entidade
 
 class Item(Entidade):
@@ -11,9 +12,9 @@ class Item(Entidade):
         self.velocidade = velocidade_atual
         
         # Seleciona a imagem correta
-        if tipo_item == "cafe": nome = 'cafe.png'
-        elif tipo_item == "luzes": nome = 'luzes.png'
-        else: nome = 'waffle.png'
+        if tipo_item == "cafe": nome = IMAGEM_CAFE
+        elif tipo_item == "luzes": nome = IMAGEM_PISCA_PISCA
+        else: nome = IMAGEM_WAFFLE
         
         # Posição Y aleatória para variar o pulo
         pos_y = random.choice([NIVEL_CHAO - 150, NIVEL_CHAO - 300]) 

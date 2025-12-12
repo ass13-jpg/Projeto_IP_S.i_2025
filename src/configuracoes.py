@@ -31,3 +31,4 @@ GRAVIDADE = 2.0           # Força que puxa para baixo
 FORCA_PULO = -40          # Força negativa (para cima) ao pular
 VELOCIDADE_NORMAL = 12    # Velocidade de scroll no mundo normal
 VELOCIDADE_RAPIDA = 20    # Velocidade no mundo invertido
+
