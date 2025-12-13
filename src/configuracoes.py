@@ -22,6 +22,7 @@ VERMELHO_MUNDO = (100, 0, 0) # Fundo do Mundo Invertido
 AZUL = (0, 0, 255)
 AMARELO = (255, 255, 0)      # Usado para Score e Destaques
 
+
 # Cores de Fallback (Usadas se a imagem não carregar)
 MARROM = (139, 69, 19)       # Café
 VERDE_LUZ = (0, 255, 0)      # Luzes
@@ -30,5 +31,5 @@ VERDE_LUZ = (0, 255, 0)      # Luzes
 GRAVIDADE = 2.0           # Força que puxa para baixo
 FORCA_PULO = -40          # Força negativa (para cima) ao pular
 VELOCIDADE_NORMAL = 12    # Velocidade de scroll no mundo normal
-VELOCIDADE_RAPIDA = 20    # Velocidade no mundo invertido
+VELOCIDADE_RAPIDA = 16    # Velocidade no mundo invertido
 

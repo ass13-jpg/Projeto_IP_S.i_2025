@@ -1,11 +1,38 @@
 import pygame
 import sys
+import random
+
 from src.configuracoes import *
 from src.menu import MenuPrincipal
 from src.gerenciador import GerenciadorJogo
 from src.telas.selecao import TelaSelecao
 from src.telas.game_over import TelaGameOver
 
+class Particula:
+    # Representa uma partícula para o efeito visual da neve/poeira no Mundo Invertido.
+    
+    def __init__(self, largura_tela, altura_tela):
+        self.largura_tela = largura_tela
+        self.altura_tela = altura_tela
+        # Posição inicial aleatória
+        self.x = random.randint(0, largura_tela)
+        self.y = random.randint(0, altura_tela)
+        self.radius = random.randint(1, 3) 
+        self.velocidade_y = random.uniform(1.0, 3.5)
+        self.velocidade_x = random.uniform(-0.5, 0.5) 
+        self.cor = BRANCO # Usando BRANCO da src/configuracoes
+
+    def mover(self):
+        self.x += self.velocidade_x
+        self.y += self.velocidade_y
+        
+        # Reinicia a partícula no topo
+        if self.y > self.altura_tela:
+            self.y = 0  
+            self.x = random.randint(0, self.largura_tela)
+
+    def desenhar(self, tela, cor_particula):
+        pygame.draw.circle(tela, cor_particula, (int(self.x), int(self.y)), self.radius)
 
 def main():
     pygame.init()
@@ -22,6 +49,16 @@ def main():
     jogo = GerenciadorJogo()
     tela_game_over = TelaGameOver(LARGURA_TELA, ALTURA_TELA)  
     
+    global particulas 
+    particulas = []
+    NUMERO_PARTICULAS = 150 
+    
+    # Cores fixas para o efeito invertido
+    COR_PARTICULA_INVERTIDA = (255, 100, 100) #
+    
+    for _ in range(NUMERO_PARTICULAS):
+        particulas.append(Particula(LARGURA_TELA, ALTURA_TELA))
+
     try: menu.tocar_musica()
     except: pass
     
@@ -59,26 +96,39 @@ def main():
             
             # 1. TRANSIÇÃO PARA GAME OVER
             if jogo.game_over:
-                jogo.desenhar(tela) # Desenha o último frame (para servir de fundo)
+                jogo.desenhar_fundo(tela) 
+                jogo.desenhar_sprites(tela) # Mantém os sprites para o fundo do GO
                 estado_atual = "GAME_OVER"
-                continue # Pula o resto do loop do JOGO e vai para o novo estado
+                continue
 
-            # 2. Lógica de Input (Apenas se o jogo estiver rodando)
+            # 2. Lógica de Input 
             for evento in eventos:
                 if evento.type == pygame.KEYDOWN:
-                    # ESC durante o jogo volta ao menu
                     if evento.key == pygame.K_ESCAPE:
                         estado_atual = "MENU"
                         try: menu.tocar_musica()
                         except: pass
-                    
                     if evento.key == pygame.K_SPACE or evento.key == pygame.K_UP:
                         jogo.jogador.pular()
             
-            # 3. Atualização e Desenho
+            # 3. Atualização de Lógica
             jogo.atualizar()
-            jogo.desenhar(tela)
+
+            # CAMADA 1: FUNDO
+            jogo.desenhar_fundo(tela)
             
+            # CAMADA 2: SPRITES (Jogador, Obstáculos, Itens)
+            jogo.desenhar_sprites(tela) 
+
+            # CAMADA 3: PARTÍCULAS (Por cima do cenário e dos sprites, mas por baixo do HUD)
+            if jogo.mundo_invertido: 
+                for particula in particulas:
+                    particula.mover()
+                    # Usando a constante definida em configuracoes.py
+                    particula.desenhar(tela, COR_PARTICULA_INVERTIDA) 
+
+            # CAMADA 4: HUD e TIMER (Por cima de TUDO)
+            jogo.desenhar_hud_e_game_over(tela)
         
         elif estado_atual == "GAME_OVER":
             pygame.mouse.set_visible(True) # Mostra o cursor

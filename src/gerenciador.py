@@ -150,25 +150,32 @@ class GerenciadorJogo:
             elif item.tipo == "luzes": 
                 self.conta_luzes += 1 
 
-    def desenhar(self, tela):
+    def desenhar_fundo(self, tela):
+        """Desenha apenas o fundo/cenário (Normal ou Invertido). Deve ser o primeiro a ser chamado."""
         # 1. Fundo
         if self.tem_fundo:
             fundo = self.img_fundo_invertido if self.mundo_invertido else self.img_fundo_normal
+            # Desenha o fundo normal (ou invertido)
             tela.blit(fundo, (self.posicao_fundo, 0))
             tela.blit(fundo, (self.posicao_fundo + LARGURA_TELA, 0))
         else:
+            # Fallback para cor sólida (usando as constantes de configuração)
             tela.fill(VERMELHO_MUNDO if self.mundo_invertido else VERDE_CIN)
-
+            
+    def desenhar_sprites(self, tela):
+        """Desenha o jogador, obstáculos e itens."""
         # 2. Sprites
         self.grupo_jogador.draw(tela)
         self.grupo_obstaculos.draw(tela)
         self.grupo_itens.draw(tela)
 
-        # Só desenha o círculo se o escudo estiver ATIVO (ou seja, completou 5 cafés)
+        # Só desenha o círculo se o escudo estiver ATIVO
         if self.jogador.tem_escudo:
             centro = self.jogador.rect.center
             pygame.draw.circle(tela, MARROM, centro, 90, 5)
 
+    def desenhar_hud_e_game_over(self, tela):
+        """Desenha o HUD, Timer e a tela de Game Over (deve ser o último a ser chamado)."""
         # 3. HUD (Texto)
         texto = f"SCORE: {self.pontos_score} | VIDAS: {self.jogador.vidas} | LUZES: {self.conta_luzes}/10"
         
