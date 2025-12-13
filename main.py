@@ -4,6 +4,8 @@ from src.configuracoes import *
 from src.menu import MenuPrincipal
 from src.gerenciador import GerenciadorJogo
 from src.telas.selecao import TelaSelecao
+from src.telas.game_over import TelaGameOver
+
 
 def main():
     pygame.init()
@@ -18,6 +20,7 @@ def main():
     menu = MenuPrincipal(LARGURA_TELA, ALTURA_TELA)
     selecao = TelaSelecao(LARGURA_TELA, ALTURA_TELA)
     jogo = GerenciadorJogo()
+    tela_game_over = TelaGameOver(LARGURA_TELA, ALTURA_TELA)  
     
     try: menu.tocar_musica()
     except: pass
@@ -53,29 +56,49 @@ def main():
 
         elif estado_atual == "JOGO":
             pygame.mouse.set_visible(False)
+            
+            # 1. TRANSIÇÃO PARA GAME OVER
+            if jogo.game_over:
+                jogo.desenhar(tela) # Desenha o último frame (para servir de fundo)
+                estado_atual = "GAME_OVER"
+                continue # Pula o resto do loop do JOGO e vai para o novo estado
+
+            # 2. Lógica de Input (Apenas se o jogo estiver rodando)
             for evento in eventos:
                 if evento.type == pygame.KEYDOWN:
                     # ESC durante o jogo volta ao menu
-                    if evento.key == pygame.K_ESCAPE and not jogo.game_over:
+                    if evento.key == pygame.K_ESCAPE:
                         estado_atual = "MENU"
                         try: menu.tocar_musica()
                         except: pass
                     
                     if evento.key == pygame.K_SPACE or evento.key == pygame.K_UP:
                         jogo.jogador.pular()
-                    
-                    # Comandos de Game Over
-                    if jogo.game_over:
-                        if evento.key == pygame.K_r: 
-                            jogo.resetar_jogo(jogo.personagem_selecionado)
-                        if evento.key == pygame.K_ESCAPE: 
-                            estado_atual = "MENU"
-                            try: menu.tocar_musica()
-                            except: pass
-
+            
+            # 3. Atualização e Desenho
             jogo.atualizar()
             jogo.desenhar(tela)
+            
+        
+        elif estado_atual == "GAME_OVER":
+            pygame.mouse.set_visible(True) # Mostra o cursor
+    
+            # Desenha a nova tela de Game Over (overlay + texto)
+            tela_game_over.desenhar(tela, jogo.pontos_score)
 
+            # Processa os inputs específicos para Game Over
+            for evento in eventos:
+                if evento.type == pygame.KEYDOWN:
+                    # Reiniciar (R)
+                    if evento.key == pygame.K_r: 
+                        jogo.resetar_jogo(jogo.personagem_selecionado)
+                        estado_atual = "JOGO" # Volta para o jogo
+                    
+                    # Voltar ao Menu (ESC)
+                    elif evento.key == pygame.K_ESCAPE: 
+                        estado_atual = "MENU" # Volta ao Menu
+                        try: menu.tocar_musica()
+                        except: pass
         elif estado_atual == "CREDITOS":
             pygame.mouse.set_visible(True)
             tela.fill(PRETO)
@@ -100,4 +123,4 @@ def main():
     sys.exit()
 
 if __name__ == "__main__":
-    main()  
+    main()
