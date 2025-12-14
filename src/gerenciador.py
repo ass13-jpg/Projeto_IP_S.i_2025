@@ -2,11 +2,42 @@ import pygame
 import random
 import os
 from src.configuracoes import *
+from src.assets_paths import *
 
 # IMPORTAÇÕES DE CLASSES (MODULOS)
 from src.atores.jogador import Jogador
 from src.atores.obstaculo import Obstaculo
 from src.itens.coletavel import Item
+
+DIR_RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ASSETS_DIR = os.path.join(DIR_RAIZ, 'assets')
+
+import pygame.mixer
+
+
+if not pygame.mixer.get_init():
+    pygame.mixer.init()
+
+try:
+    # Definindo 44100Hz (qualidade CD) e buffer pequeno para baixa latência
+    pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
+    print("Mixer Pygame inicializado com sucesso.")
+except pygame.error as e:
+    print(f"Erro ao inicializar o Mixer: {e}") 
+
+# 2. Carrega o som do pulo de forma GLOBAL (acessível pelo Jogador.py)
+# Isso deve funcionar agora que o mixer está inicializado corretamente
+try:
+    SOM_PULO_OBJETO = pygame.mixer.Sound(
+        os.path.join(ASSETS_DIR, 'sons', SOM_PULO)
+    )
+except pygame.error as e:
+    print(f"Erro ao carregar SOM_PULO. Verifique o formato do arquivo (tente .wav): {e}")
+    # Cria um som mudo para evitar falha se o arquivo estiver corrompido
+    SOM_PULO_OBJETO = pygame.mixer.Sound(buffer=128)
+
+SOM_PULO_OBJETO = pygame.mixer.Sound(
+    os.path.join(ASSETS_DIR, 'sons', SOM_PULO))
 
 class GerenciadorJogo:
     """
@@ -19,6 +50,7 @@ class GerenciadorJogo:
         
         self.personagem_selecionado = "wilque" 
         self.carregar_fundos()
+        self.iniciar_musicas()
         self.resetar_jogo()
 
     def resetar_jogo(self, personagem=None):
@@ -57,18 +89,63 @@ class GerenciadorJogo:
             self.tem_fundo = True
         except:
             self.tem_fundo = False
+    
+    def iniciar_musicas(self):
+        """Carrega caminhos, carrega o som de Game Over e toca a música de fundo inicial."""
+        
+        # 1. Carrega CAMINHOS (Lógica Padrão)
+        self.musica_real_path = os.path.join(ASSETS_DIR, 'sons', SOM_MUNDO_REAL)
+        self.musica_invertida_path = os.path.join(ASSETS_DIR, 'sons', SOM_MUNDO_INVERTIDO)
+        
+        # 2. Carrega Efeito de Game Over
+        try:
+            self.som_game_over_objeto = pygame.mixer.Sound(
+                os.path.join(ASSETS_DIR, 'sons', SOM_GAME_OVER)
+            )
+        except pygame.error as e:
+            print(f"Erro ao carregar SOM_GAME_OVER: {e}")
+            self.som_game_over_objeto = pygame.mixer.Sound(buffer=128) 
+            
+        # 3. Configura Volume
+        pygame.mixer.music.set_volume(1.0) 
+        print(f"Volume da Música: {pygame.mixer.music.get_volume()}")
 
+        # 4. Carrega e Toca a Música Inicial (Mundo Real)
+        try:
+            pygame.mixer.music.load(self.musica_real_path)
+            pygame.mixer.music.play(-1) 
+        except pygame.error as e:
+            print(f"ERRO ao carregar a MÚSICA INICIAL: {e}") 
+            print(f"Caminho tentado: {self.musica_real_path}")
     def alternar_mundo(self):
-        """Troca a dificuldade e o visual entre Normal e Invertido"""
+        """Troca a dificuldade, o visual e a música."""
+        
+        # 1. Inverte o estado
         self.mundo_invertido = not self.mundo_invertido
-        if self.mundo_invertido:
-            self.velocidade_atual = VELOCIDADE_RAPIDA
-            self.momento_entrada_invertido = pygame.time.get_ticks()
-        else:
-            self.velocidade_atual = VELOCIDADE_NORMAL
+        
+        try:
+            # 2. Define o caminho da música baseado no NOVO estado
+            if self.mundo_invertido:
+                # MUNDO INVERTIDO
+                caminho_musica = self.musica_invertida_path 
+                
+                self.velocidade_atual = VELOCIDADE_RAPIDA
+                self.momento_entrada_invertido = pygame.time.get_ticks()
+            else:
+                # MUNDO REAL
+                caminho_musica = self.musica_real_path 
+                
+                self.velocidade_atual = VELOCIDADE_NORMAL
+            
+            # 3. Carrega e Toca a Música
+            pygame.mixer.music.load(caminho_musica) 
+            pygame.mixer.music.play(-1)
+            
+        except pygame.error as e:
+             print(f"Erro ao tentar trocar a música no alternar_mundo: {e}")
             
         self.conta_luzes = 0
-
+        
     def atualizar(self):
         """Loop lógico (60 FPS)"""
         if self.game_over: return
@@ -127,7 +204,12 @@ class GerenciadorJogo:
             if not self.jogador.tem_escudo:
                 # Sem escudo: Perde vida
                 self.jogador.vidas -= 1
-                if self.jogador.vidas <= 0: self.game_over = True
+                if self.jogador.vidas <= 0: 
+                    
+                    pygame.mixer.music.stop()
+                    self.som_game_over_objeto.play()
+
+                    self.game_over = True
             else: 
                 # Com escudo: Perde o escudo, mas salva a vida
                 self.jogador.tem_escudo = False

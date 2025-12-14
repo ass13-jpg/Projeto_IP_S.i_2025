@@ -2,6 +2,7 @@ from src.configuracoes import *
 from src.base.entidade import Entidade
 from src.assets_paths import*
 
+
 class Jogador(Entidade):
     """
     Controla o aluno. Gerencia Pulo Duplo, Gravidade e Vidas.
@@ -31,6 +32,11 @@ class Jogador(Entidade):
         if self.pulos_dados < 2:
             self.velocidade_y = FORCA_PULO
             self.pulos_dados += 1 # Conta +1 pulo
+
+            from ..gerenciador import SOM_PULO_OBJETO
+            
+            if SOM_PULO_OBJETO:
+                 SOM_PULO_OBJETO.play()
 
     def update(self):
         # Aplica gravidade constante
