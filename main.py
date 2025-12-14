@@ -3,9 +3,8 @@ import sys
 import random
 
 from src.configuracoes import *
-from src.menu import MenuPrincipal
+from src.menu import MenuPrincipal, TelaSelecao 
 from src.gerenciador import GerenciadorJogo
-from src.telas.selecao import TelaSelecao
 from src.telas.game_over import TelaGameOver
 
 class Particula:
@@ -20,7 +19,7 @@ class Particula:
         self.radius = random.randint(1, 3) 
         self.velocidade_y = random.uniform(1.0, 3.5)
         self.velocidade_x = random.uniform(-0.5, 0.5) 
-        self.cor = BRANCO # Usando BRANCO da src/configuracoes
+        self.cor = BRANCO 
 
     def mover(self):
         self.x += self.velocidade_x
@@ -45,7 +44,7 @@ def main():
 
     # Instancia as telas
     menu = MenuPrincipal(LARGURA_TELA, ALTURA_TELA)
-    selecao = TelaSelecao(LARGURA_TELA, ALTURA_TELA)
+    selecao = TelaSelecao(LARGURA_TELA, ALTURA_TELA) 
     jogo = GerenciadorJogo()
     tela_game_over = TelaGameOver(LARGURA_TELA, ALTURA_TELA)  
     
@@ -54,7 +53,7 @@ def main():
     NUMERO_PARTICULAS = 150 
     
     # Cores fixas para o efeito invertido
-    COR_PARTICULA_INVERTIDA = (255, 100, 100) #
+    COR_PARTICULA_INVERTIDA = (255, 100, 100) 
     
     for _ in range(NUMERO_PARTICULAS):
         particulas.append(Particula(LARGURA_TELA, ALTURA_TELA))
@@ -84,12 +83,16 @@ def main():
 
         elif estado_atual == "SELECAO":
             pygame.mouse.set_visible(True)
+            # Verifica se o jogador confirmou a seleção
             personagem = selecao.update(eventos)
+            
+            # Se personagem retornou um nome (ex: "WILQUE"), inicia o jogo
             if personagem: 
                 pygame.mixer.music.fadeout(500)
                 jogo.resetar_jogo(personagem) 
                 estado_atual = "JOGO"
-            selecao.desenhar(tela)
+            
+            selecao.draw(tela)
 
         elif estado_atual == "JOGO":
             pygame.mouse.set_visible(False)
@@ -124,7 +127,6 @@ def main():
             if jogo.mundo_invertido: 
                 for particula in particulas:
                     particula.mover()
-                    # Usando a constante definida em configuracoes.py
                     particula.desenhar(tela, COR_PARTICULA_INVERTIDA) 
 
             # CAMADA 4: HUD e TIMER (Por cima de TUDO)
@@ -149,6 +151,7 @@ def main():
                         estado_atual = "MENU" # Volta ao Menu
                         try: menu.tocar_musica()
                         except: pass
+                        
         elif estado_atual == "CREDITOS":
             pygame.mouse.set_visible(True)
             tela.fill(PRETO)

@@ -14,7 +14,6 @@ ASSETS_DIR = os.path.join(DIR_RAIZ, 'assets')
 
 import pygame.mixer
 
-
 if not pygame.mixer.get_init():
     pygame.mixer.init()
 
@@ -25,19 +24,14 @@ try:
 except pygame.error as e:
     print(f"Erro ao inicializar o Mixer: {e}") 
 
-# 2. Carrega o som do pulo de forma GLOBAL (acessível pelo Jogador.py)
-# Isso deve funcionar agora que o mixer está inicializado corretamente
+# 2. Carrega o som do pulo de forma GLOBAL
 try:
     SOM_PULO_OBJETO = pygame.mixer.Sound(
         os.path.join(ASSETS_DIR, 'sons', SOM_PULO)
     )
 except pygame.error as e:
-    print(f"Erro ao carregar SOM_PULO. Verifique o formato do arquivo (tente .wav): {e}")
-    # Cria um som mudo para evitar falha se o arquivo estiver corrompido
-    SOM_PULO_OBJETO = pygame.mixer.Sound(buffer=128)
-
-SOM_PULO_OBJETO = pygame.mixer.Sound(
-    os.path.join(ASSETS_DIR, 'sons', SOM_PULO))
+    print(f"Erro ao carregar SOM_PULO: {e}")
+    SOM_PULO_OBJETO = pygame.mixer.Sound(buffer=128) # Som mudo de segurança
 
 class GerenciadorJogo:
     """
@@ -48,6 +42,7 @@ class GerenciadorJogo:
         self.fonte = pygame.font.SysFont('Arial', 30, bold=True)
         self.fonte_go = pygame.font.SysFont('Arial', 60, bold=True)
         
+        # Padrão em minúsculo
         self.personagem_selecionado = "wilque" 
         self.carregar_fundos()
         self.iniciar_musicas()
@@ -56,7 +51,8 @@ class GerenciadorJogo:
     def resetar_jogo(self, personagem=None):
         """Reinicia todas as variáveis para uma nova partida"""
         if personagem:
-            self.personagem_selecionado = personagem
+            # CORREÇÃO AQUI: .lower() garante que "WILQUE" vire "wilque"
+            self.personagem_selecionado = personagem.lower()
 
         self.pontos_score = 0           
         self.ultimo_score_lanterna = 0  
@@ -73,6 +69,7 @@ class GerenciadorJogo:
         self.momento_entrada_invertido = 0 
         self.cooldown_spawn = 0         
         
+        # Passa o nome corrigido (minúsculo) para o Jogador
         self.jogador = Jogador(self.personagem_selecionado)
         self.grupo_jogador = pygame.sprite.GroupSingle(self.jogador)
         self.grupo_obstaculos = pygame.sprite.Group()
@@ -117,6 +114,7 @@ class GerenciadorJogo:
         except pygame.error as e:
             print(f"ERRO ao carregar a MÚSICA INICIAL: {e}") 
             print(f"Caminho tentado: {self.musica_real_path}")
+
     def alternar_mundo(self):
         """Troca a dificuldade, o visual e a música."""
         
