@@ -155,15 +155,20 @@ def main():
         elif estado_atual == "CREDITOS":
             pygame.mouse.set_visible(True)
             tela.fill(PRETO)
-            fonte = pygame.font.SysFont("arial", 40, bold=True)
             
-            t1 = fonte.render("Desenvolvido por Alunos do CIn - UFPE", True, AMARELO)
-            t2 = fonte.render("Disciplina: Introdução à Programação", True, BRANCO)
-            t3 = fonte.render("Pressione ESC para voltar", True, (200, 200, 200))
-            
-            tela.blit(t1, (LARGURA_TELA//2 - t1.get_width()//2, ALTURA_TELA//2 - 50))
-            tela.blit(t2, (LARGURA_TELA//2 - t2.get_width()//2, ALTURA_TELA//2 + 10))
-            tela.blit(t3, (LARGURA_TELA//2 - t3.get_width()//2, ALTURA_TELA//2 + 100))
+            # --- DESENHA A IMAGEM DE CRÉDITOS ---
+            if menu.img_creditos:
+                tela.blit(menu.img_creditos, (0, 0))
+            else:
+                # Fallback caso a imagem não carregue
+                fonte = pygame.font.SysFont("arial", 40, bold=True)
+                t1 = fonte.render("Desenvolvido por Alunos do CIn - UFPE", True, AMARELO)
+                t2 = fonte.render("Imagem de créditos não encontrada!", True, BRANCO)
+                t3 = fonte.render("Pressione ESC para voltar", True, (200, 200, 200))
+                
+                tela.blit(t1, (LARGURA_TELA//2 - t1.get_width()//2, ALTURA_TELA//2 - 50))
+                tela.blit(t2, (LARGURA_TELA//2 - t2.get_width()//2, ALTURA_TELA//2 + 10))
+                tela.blit(t3, (LARGURA_TELA//2 - t3.get_width()//2, ALTURA_TELA//2 + 100))
             
             for e in eventos:
                 if e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE: 

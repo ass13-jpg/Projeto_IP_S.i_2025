@@ -51,6 +51,7 @@ class Button:
 class MenuPrincipal:
     def __init__(self, w, h):
         self.w, self.h = w, h
+        self.img_creditos = None # Variável para guardar a imagem
         self.carregar_assets()
         
         # Posicionamento dos botões
@@ -63,10 +64,15 @@ class MenuPrincipal:
 
     def carregar_assets(self):
         dir_raiz = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        
+        # Caminhos das imagens
         caminho_bg = os.path.join(dir_raiz, "assets", "imagens", "image_0.png")
         caminho_logo = os.path.join(dir_raiz, "assets", "imagens", "image_1.png")
+        caminho_creditos = os.path.join(dir_raiz, "assets", "imagens", "creditos.png") # Caminho novo
+        
         self.caminho_musica = os.path.join(dir_raiz, "assets", "sons", "theme.mp3")
         
+        # Carrega Fundo e Logo
         try:
             self.bg = pygame.transform.scale(pygame.image.load(caminho_bg).convert(), (self.w, self.h))
             logo = pygame.image.load(caminho_logo).convert_alpha()
@@ -75,6 +81,14 @@ class MenuPrincipal:
         except:
             self.bg = None
             self.logo = None
+            
+        # Carrega Imagem de Créditos
+        try:
+            img_c = pygame.image.load(caminho_creditos).convert()
+            self.img_creditos = pygame.transform.scale(img_c, (self.w, self.h))
+        except:
+            print("Aviso: Imagem creditos.png não encontrada.")
+            self.img_creditos = None
 
     def tocar_musica(self):
         try:
