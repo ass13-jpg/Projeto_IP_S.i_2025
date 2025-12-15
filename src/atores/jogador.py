@@ -17,7 +17,7 @@ class Jogador(Entidade):
             # Mantém 'ellen.png' se não tiver a constante dela
             arquivo = IMAGEM_BASE_ELLEN + ".png"
             
-        super().__init__(100, NIVEL_CHAO - 160, 100, 160, arquivo)
+        super().__init__(100, NIVEL_CHAO - 50, 180, 400, arquivo)
         
         self.velocidade_y = 0
         self.vidas = VIDAS_INICIAIS 
@@ -42,9 +42,10 @@ class Jogador(Entidade):
         # Aplica gravidade constante
         self.velocidade_y += GRAVIDADE
         self.rect.y += self.velocidade_y
+        ajuste = 120  # Ajuste para alinhar o pé do personagem com o chão
         
         # Colisão com o chão (Reset do pulo duplo)
-        if self.rect.bottom >= NIVEL_CHAO:
-            self.rect.bottom = NIVEL_CHAO
+        if self.rect.bottom >= NIVEL_CHAO + ajuste:
+            self.rect.bottom = NIVEL_CHAO + ajuste
             self.velocidade_y = 0
             self.pulos_dados = 0 # Zera o contador ao tocar no chão

@@ -19,7 +19,7 @@ class Item(Entidade):
         # Posição Y aleatória para variar o pulo
         pos_y = random.choice([NIVEL_CHAO - 150, NIVEL_CHAO - 300]) 
         
-        super().__init__(LARGURA_TELA + random.randint(0, 200), pos_y, 60, 60, nome)
+        super().__init__(LARGURA_TELA + random.randint(0, 200), pos_y, 100, 100, nome)
 
     def update(self):
         self.rect.x -= self.velocidade

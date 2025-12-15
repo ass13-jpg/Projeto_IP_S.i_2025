@@ -13,10 +13,10 @@ class Obstaculo(Entidade):
         
         if tipo == 'demodog':
             # Demodog: Baixo e Largo
-            super().__init__(LARGURA_TELA + random.randint(0, 400), NIVEL_CHAO - 80, 120, 80, IMAGEM_DEMODOG)
+            super().__init__(LARGURA_TELA + random.randint(0, 400), NIVEL_CHAO - 88, 120, 180, IMAGEM_DEMODOG)
         else:
             # Cadeira: Alta e Estreita
-            super().__init__(LARGURA_TELA + random.randint(0, 400), NIVEL_CHAO - 120, 80, 100, IMAGEM_CADEIRA)
+            super().__init__(LARGURA_TELA + random.randint(0, 400), NIVEL_CHAO - 95, 80, 130, IMAGEM_CADEIRA)
             
         self.velocidade = velocidade_atual
 
