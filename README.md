@@ -186,3 +186,8 @@ class GerenciadorJogo:
 ```
 
 ## **Capturas de tela**
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/5ef23e2a-8e35-48ae-a9bc-daf1fccaf03d" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/5dc8eb28-d72d-479e-91e1-019e69723eaa" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/802fafa8-5b2b-4e8f-a22e-d6e8add38d98" />
+
+
