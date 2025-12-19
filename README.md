@@ -316,18 +316,14 @@ assets/
 Arquivo principal que **inicializa o jogo**, cria a janela e inicia o loop principal.
 
 ## **Capturas de tela**
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/24b18874-b016-400d-b898-ee32c90828db" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/380018fb-98c9-4e75-b1f8-f39063471d5c" />
+<img width="1366" height="768" alt="image" src="https://github.com/user-attachments/assets/bab8849f-0933-484b-bb9f-b20b25fa1b2d" />
+<img width="1366" height="768" alt="image" src="https://github.com/user-attachments/assets/941a968a-ba87-4a0e-8821-2d93021fa202" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/ebaa6617-cdd7-4355-a5c2-464bd25ee0dc" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/4b932090-a604-4750-abea-8611ff7fffad" />
 
-![image.png](attachment:9c4c132d-cb95-4dfa-874d-1ca3ad0435af:image.png)
 
-![image.png](attachment:91c466f9-8684-4bfa-9694-a3234686746e:image.png)
-
-![image.png](attachment:5bf3ed8e-c54a-4f53-901c-585da9a48939:image.png)
-
-![image.png](attachment:c9a67b6e-1867-4207-a81b-f0d41d54c23e:image.png)
-
-![image.png](attachment:b93f4e70-305d-4a52-96b0-22aba54d2847:image.png)
-
-![game over.png](attachment:512ee1c5-0769-4678-a32a-71ec8cc9711b:game_over.png)
 
 ## 💪Desafios:
 
@@ -354,3 +350,4 @@ A Solução: Capacitação da equipe. Estabelecemos boas práticas de commits e 
 > O Aprendizado: Em grupo, código organizado é sobrevivência.
 Na Prática: A aplicação de Orientação a Objetos (POO) e estruturas de dados (Listas/Dicionários) permitiu o trabalho simultâneo e provou a versatilidade do Python/Pygame para prototipagem rápida.
 >
+
