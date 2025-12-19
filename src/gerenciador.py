@@ -4,303 +4,331 @@ import os
 from src.configuracoes import *
 from src.assets_paths import *
 
-# IMPORTAÇÕES DE CLASSES (MODULOS)
+# ==============================================================================
+# IMPORTAÇÕES DOS ATORES (PERSONAGENS E OBJETOS)
+# ==============================================================================
 from src.atores.jogador import Jogador
 from src.atores.obstaculo import Obstaculo
 from src.itens.coletavel import Item
 
+# Define o diretório raiz para que o Python encontre os arquivos em qualquer PC
 DIR_RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ASSETS_DIR = os.path.join(DIR_RAIZ, 'assets')
 
+# ==============================================================================
+# CONFIGURAÇÃO DE ÁUDIO GLOBAL (ANTI-DELAY)
+# ==============================================================================
 import pygame.mixer
 
 if not pygame.mixer.get_init():
     pygame.mixer.init()
 
 try:
-    # Definindo 44100Hz e buffer pequeno para baixa latência
+    # buffer=512 é crucial: diminui o atraso entre o comando e o som sair
     pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
-    print("Mixer Pygame inicializado com sucesso.")
 except pygame.error as e:
-    print(f"Erro ao inicializar o Mixer: {e}") 
+    print(f"Erro ao inicializar Mixer: {e}") 
 
-# Carrega o som do pulo de forma GLOBAL
+# Carregamento antecipado do som de pulo para evitar travadinhas durante o jogo
 try:
-    SOM_PULO_OBJETO = pygame.mixer.Sound(
-        os.path.join(ASSETS_DIR, 'sons', SOM_PULO)
-    )
-    # --- VOLUME DO PULO: 30% ---
+    SOM_PULO_OBJETO = pygame.mixer.Sound(os.path.join(ASSETS_DIR, 'sons', SOM_PULO))
     SOM_PULO_OBJETO.set_volume(0.30) 
-    
-except pygame.error as e:
-    print(f"Erro ao carregar SOM_PULO: {e}")
-    SOM_PULO_OBJETO = pygame.mixer.Sound(buffer=128) # Som mudo de segurança
+except Exception:
+    SOM_PULO_OBJETO = pygame.mixer.Sound(buffer=128) # Cria som mudo se falhar
 
+# ==============================================================================
+# CLASSE GERENCIADOR: O CÉREBRO DO JOGO
+# ==============================================================================
 class GerenciadorJogo:
-    """
-    Classe MÃE.
-    Gerencia Score, Vidas, Regras de Café (5x) e Mudança de Mundo.
-    """
     def __init__(self):
-        # --- CARREGAMENTO DA FONTE BLOCKCRAFT ---
+        """Inicializa configurações globais, fontes e carrega arquivos."""
+        
+        # --- 1. CONFIGURAÇÃO DE FONTES ---
         caminho_fonte = os.path.join(DIR_RAIZ, 'assets', 'fontes', 'BlockCraft.ttf')
         
-        tamanho_hud = 40 
-        tamanho_popups = 30
-        tamanho_game_over = 70
-
+        # Tenta carregar a fonte estilo Stranger Things/Minecraft
         if os.path.exists(caminho_fonte):
-            self.fonte = pygame.font.Font(caminho_fonte, tamanho_hud)
-            self.fonte_popup = pygame.font.Font(caminho_fonte, tamanho_popups) 
-            self.fonte_go = pygame.font.Font(caminho_fonte, tamanho_game_over)
+            self.fonte = pygame.font.Font(caminho_fonte, 40)       # Texto normal
+            self.fonte_popup = pygame.font.Font(caminho_fonte, 30) # Textos flutuantes
+            self.fonte_go = pygame.font.Font(caminho_fonte, 70)    # Game Over
         else:
-            print(f"AVISO: Fonte BlockCraft não encontrada em {caminho_fonte}. Usando Arial.")
+            # Fallback (Plano B) caso a fonte não exista
             self.fonte = pygame.font.SysFont('Arial', 30, bold=True)
             self.fonte_popup = pygame.font.SysFont('Arial', 20, bold=True)
             self.fonte_go = pygame.font.SysFont('Arial', 60, bold=True)
         
-        # Padrão em minúsculo
         self.personagem_selecionado = "wilque" 
         
-        # Carrega os cenários novos
-        self.carregar_fundos()
-        
-        # Carrega os caminhos das músicas
-        self.iniciar_musicas()
-        
-        # Reseta o jogo (Isso vai dar o play na música agora)
-        self.resetar_jogo()
+        # --- 2. EXECUÇÃO INICIAL ---
+        self.carregar_fundos()    # Carrega imagens de cenário
+        self.iniciar_musicas()    # Prepara playlists
+        self.resetar_jogo()       # Zera pontuação e vidas
 
     def resetar_jogo(self, personagem=None):
-        """Reinicia todas as variáveis para uma nova partida"""
+        """Reinicia todas as variáveis para começar uma nova partida."""
         if personagem:
             self.personagem_selecionado = personagem.lower()
 
+        # Placar e Mecânicas
         self.pontos_score = 0          
         self.ultimo_score_lanterna = 0  
-        
         self.vidas = VIDAS_INICIAIS     
         self.game_over = False
         
+        # Inventário
         self.conta_cafe = 0    
         self.conta_luzes = 0   
         
+        # Controle de Mundo (Normal vs Invertido)
         self.mundo_invertido = False 
         self.velocidade_atual = VELOCIDADE_NORMAL
         self.posicao_fundo = 0 
-        self.momento_entrada_invertido = 0 
-        self.cooldown_spawn = 0         
+        self.momento_entrada_invertido = 0
         
+        # Controle de Geração de Inimigos (Spawning)
+        self.cooldown_spawn = 0         
         self.textos_flutuantes = [] 
 
+        # Recria os Grupos de Sprites (limpa os antigos)
         self.jogador = Jogador(self.personagem_selecionado)
         self.grupo_jogador = pygame.sprite.GroupSingle(self.jogador)
         self.grupo_obstaculos = pygame.sprite.Group()
         self.grupo_itens = pygame.sprite.Group()
 
-        # Garante que começa com a música do mundo normal tocando
+        # Toca a música do mundo normal
         try:
             pygame.mixer.music.load(self.musica_real_path)
-            pygame.mixer.music.play(-1)
-        except Exception as e:
-            print(f"Erro ao iniciar música no reset: {e}")
+            pygame.mixer.music.play(-1) # Loop infinito
+        except Exception:
+            pass
 
     def carregar_fundos(self):
-        dir_raiz = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        
-        # cenario_n = Normal (Início)
-        # cenario_i = Invertido
-        path_bg_normal = os.path.join(dir_raiz, 'assets', 'cenarios', 'cenario_n.png') 
-        path_bg_invertido = os.path.join(dir_raiz, 'assets', 'cenarios', 'cenario_i.png')
+        """Carrega as imagens de fundo e trata erros se não existirem."""
+        path_bg_normal = os.path.join(DIR_RAIZ, 'assets', 'cenarios', 'cenario_n.png') 
+        path_bg_invertido = os.path.join(DIR_RAIZ, 'assets', 'cenarios', 'cenario_i.png')
         
         try:
-            bg_normal_bruto = pygame.image.load(path_bg_normal).convert()
-            bg_invertido_bruto = pygame.image.load(path_bg_invertido).convert()
-
-            self.img_fundo_normal = pygame.transform.scale(bg_normal_bruto, (LARGURA_TELA, ALTURA_TELA))
-            self.img_fundo_invertido = pygame.transform.scale(bg_invertido_bruto, (LARGURA_TELA, ALTURA_TELA))
-            
+            bg_n = pygame.image.load(path_bg_normal).convert()
+            bg_i = pygame.image.load(path_bg_invertido).convert()
+            # Redimensiona para caber perfeitamente na janela
+            self.img_fundo_normal = pygame.transform.scale(bg_n, (LARGURA_TELA, ALTURA_TELA))
+            self.img_fundo_invertido = pygame.transform.scale(bg_i, (LARGURA_TELA, ALTURA_TELA))
             self.tem_fundo = True
-            print("Cenários carregados e redimensionados com sucesso!")
-        except Exception as e:
-            print(f"ERRO AO CARREGAR CENÁRIOS: {e}")
+        except:
+            print("ERRO: Imagens de cenário não encontradas. Usando cor sólida.")
             self.tem_fundo = False
     
     def iniciar_musicas(self):
-        """Define os caminhos das músicas e sons."""
-        
-        # 1. Carrega CAMINHOS
+        """Define os caminhos dos arquivos de áudio."""
         self.musica_real_path = os.path.join(ASSETS_DIR, 'sons', SOM_MUNDO_REAL)
         self.musica_invertida_path = os.path.join(ASSETS_DIR, 'sons', SOM_MUNDO_INVERTIDO)
-        
-        # 2. Carrega Efeito de Game Over
         try:
-            self.som_game_over_objeto = pygame.mixer.Sound(
-                os.path.join(ASSETS_DIR, 'sons', SOM_GAME_OVER)
-            )
-        except pygame.error as e:
-            print(f"Erro ao carregar SOM_GAME_OVER: {e}")
+            self.som_game_over_objeto = pygame.mixer.Sound(os.path.join(ASSETS_DIR, 'sons', SOM_GAME_OVER))
+        except:
             self.som_game_over_objeto = pygame.mixer.Sound(buffer=128) 
             
-        # --- VOLUME DA MÚSICA: 25% ---
         pygame.mixer.music.set_volume(0.25) 
 
     def alternar_mundo(self):
-        """Troca a dificuldade, o visual e a música."""
+        """
+        Lógica Central de Troca de Dimensão.
+        Alterna entre Mundo Real e Mundo Invertido, mudando música e velocidade.
+        """
         self.mundo_invertido = not self.mundo_invertido
         
         try:
             if self.mundo_invertido:
-                # MUNDO INVERTIDO
-                caminho_musica = self.musica_invertida_path 
-                self.velocidade_atual = VELOCIDADE_RAPIDA
-                self.momento_entrada_invertido = pygame.time.get_ticks()
-                self.criar_popup("MUNDO INVERTIDO!", (255, 0, 0)) # Esse aviso grande mantive
+                # --- INDO PARA O MUNDO INVERTIDO ---
+                caminho = self.musica_invertida_path 
+                self.velocidade_atual = VELOCIDADE_RAPIDA # Jogo acelera
+                self.momento_entrada_invertido = pygame.time.get_ticks() # Marca hora de entrada
+                self.criar_popup("MUNDO INVERTIDO!", (255, 0, 0)) 
             else:
-                # MUNDO REAL
-                caminho_musica = self.musica_real_path 
+                # --- VOLTANDO PARA O MUNDO REAL ---
+                caminho = self.musica_real_path 
                 self.velocidade_atual = VELOCIDADE_NORMAL
-                self.criar_popup("MUNDO REAL", (0, 255, 0)) # Esse aviso grande mantive
+                self.criar_popup("MUNDO REAL", (0, 255, 0)) 
             
-            pygame.mixer.music.load(caminho_musica) 
+            # Troca a trilha sonora
+            pygame.mixer.music.load(caminho) 
             pygame.mixer.music.play(-1)
+        except:
+             pass
             
-        except pygame.error as e:
-             print(f"Erro ao tentar trocar a música no alternar_mundo: {e}")
-            
-        self.conta_luzes = 0
+        self.conta_luzes = 0 # Reseta contador para exigir nova coleta
         
     def criar_popup(self, texto, cor):
-        """Cria um texto que aparece em cima do jogador e sobe."""
+        """Cria um texto que sobe e desaparece (ex: +10 pontos)."""
         self.textos_flutuantes.append({
-            'texto': texto,
-            'x': self.jogador.rect.centerx,
-            'y': self.jogador.rect.top,
-            'tempo': 60, # O texto dura 60 frames (1 segundo)
-            'cor': cor
+            'texto': texto, 'x': self.jogador.rect.centerx,
+            'y': self.jogador.rect.top, 'tempo': 60, 'cor': cor
         })
 
     def atualizar_popups(self):
-        """Atualiza a posição e remove popups antigos."""
+        """Animação dos textos flutuantes."""
         for popup in self.textos_flutuantes[:]:
-            popup['y'] -= 1.5 # Faz o texto subir
-            popup['tempo'] -= 1
-            if popup['tempo'] <= 0:
-                self.textos_flutuantes.remove(popup)
+            popup['y'] -= 1.5   # Sobe 1.5 pixels
+            popup['tempo'] -= 1 # Reduz tempo de vida
+            if popup['tempo'] <= 0: self.textos_flutuantes.remove(popup)
 
     def atualizar(self):
-        """Loop lógico (60 FPS)"""
+        """
+        GAME LOOP PRINCIPAL:
+        Executado 60 vezes por segundo. Controla toda a lógica do jogo.
+        """
         if self.game_over: return
         
+        # Atualiza posição de todos os sprites
         self.grupo_jogador.update()
         self.grupo_obstaculos.update()
         self.grupo_itens.update()
-        
-        # Atualiza os textos flutuantes
         self.atualizar_popups()
 
-        # DIFICULDADE DINÂMICA
+        # --- DIFICULDADE DINÂMICA ---
         if self.mundo_invertido:
-            chance_inimigo = 4 
-            tempo_espera = 40 
+            chance_inimigo = 4  # 4% de chance por frame (Muitos inimigos)
+            tempo_espera = 40   # Cooldown menor
         else:
-            chance_inimigo = 1 
-            tempo_espera = 60 
+            chance_inimigo = 1.5  # 1.5% de chance (Normal)
+            tempo_espera = 60     # Cooldown maior
 
-        # Geração de Obstáculos
+        # --- GERADOR DE INIMIGOS (SPAWN) ---
         if self.cooldown_spawn > 0: self.cooldown_spawn -= 1
         
         if self.cooldown_spawn == 0:
+            # Sorteio para ver se cria inimigo agora
             if random.randint(0, 100) < chance_inimigo: 
-                self.grupo_obstaculos.add(Obstaculo(self.velocidade_atual))
+                
+                # =====================================================
+                # LÓGICA DE SORTEIO DO INIMIGO (DEMODOG VS DEMOGORGON)
+                # =====================================================
+                eh_boss = False
+                
+                if self.mundo_invertido:
+                    # No Mundo Invertido, jogamos uma moeda:
+                    # 60% de chance de ser o CHEFE (Demogorgon) - Rápido e Grande
+                    if random.randint(0, 100) < 60:
+                        eh_boss = True
+                    # 40% de chance de ser um Demodog/Cadeira - Comum
+                    else:
+                        eh_boss = False
+                else:
+                    # Mundo normal nunca tem o Chefe Demogorgon
+                    eh_boss = False
+                
+                # --- ATENÇÃO: AQUI ESTÁ A CORREÇÃO PARA A CADEIRA ---
+                # Passamos "mundo_invertido=self.mundo_invertido"
+                novo_obstaculo = Obstaculo(
+                    self.velocidade_atual, 
+                    eh_demogorgon=eh_boss,
+                    mundo_invertido=self.mundo_invertido 
+                )
+                self.grupo_obstaculos.add(novo_obstaculo)
+                
                 self.cooldown_spawn = tempo_espera
 
-        # Geração de Itens 
-        if random.randint(0, 100) < 2: 
+        # --- GERADOR DE ITENS ---
+        if random.randint(0, 100) < 2: # 2% de chance
             tipo = random.choice(["waffle", "waffle", "cafe", "luzes"])
             self.grupo_itens.add(Item(self.velocidade_atual, tipo))
 
-        # Bônus por Score
+        # --- SISTEMA DE AJUDA (LANTERNA GARANTIDA) ---
+        # Se o jogador fez muitos pontos sem ver lanterna, força o aparecimento de uma
         if self.pontos_score >= self.ultimo_score_lanterna + 30:
             self.grupo_itens.add(Item(self.velocidade_atual, "luzes"))
             self.ultimo_score_lanterna = self.pontos_score 
 
-        # Regras de Mudança de Mundo
-        if self.conta_luzes >= 10 and not self.mundo_invertido: 
+        # --- CHECAGEM DE TROCA DE MUNDO ---
+        
+        # 1. Ida para o Invertido (Pegou 5 luzes)
+        if self.conta_luzes >= 5 and not self.mundo_invertido: 
             self.alternar_mundo()
         
+        # 2. Volta para o Real (Acabou o tempo)
         if self.mundo_invertido:
             agora = pygame.time.get_ticks()
             if agora - self.momento_entrada_invertido > TEMPO_MUNDO_INVERTIDO:
                 self.alternar_mundo()
 
+        # Verifica se alguém bateu em alguém
         self.verificar_colisoes()
 
+        # --- MOVIMENTO DO FUNDO (PARALLAX SIMPLES) ---
         self.posicao_fundo -= self.velocidade_atual * 0.5 
         if self.posicao_fundo <= -LARGURA_TELA: self.posicao_fundo = 0
 
     def verificar_colisoes(self):
-        """Gerencia colisão com Inimigos e Itens"""
+        """
+        Lógica de Colisão 'Pixel-Perfect' (Hitbox Melhorada).
+        Usa collide_mask para ignorar as partes transparentes da imagem.
+        """
         
-        # 1. Colisão com Obstáculos
-        if pygame.sprite.spritecollide(self.jogador, self.grupo_obstaculos, True):
+        # 1. COLISÃO COM INIMIGOS (Usando collide_mask)
+        # O parâmetro 'collided=pygame.sprite.collide_mask' faz a mágica:
+        # Ele verifica o contorno real do desenho, não o quadrado em volta.
+        if pygame.sprite.spritecollide(self.jogador, self.grupo_obstaculos, True, collided=pygame.sprite.collide_mask):
+            
             if not self.jogador.tem_escudo:
+                # Sem escudo: Perde vida
                 self.jogador.vidas -= 1
-                # REMOVIDO: self.criar_popup("-1 VIDA", (255, 0, 0)) 
                 
                 if self.jogador.vidas <= 0: 
+                    # Morreu de vez
                     pygame.mixer.music.stop()
                     self.som_game_over_objeto.play()
                     self.game_over = True
             else: 
+                # Com escudo: Perde o escudo, mas continua vivo
                 self.jogador.tem_escudo = False
-                # REMOVIDO: self.criar_popup("ESCUDO QUEBRADO!", (255, 255, 255)) 
         
-        # 2. Colisão com Itens
-        itens_coletados = pygame.sprite.spritecollide(self.jogador, self.grupo_itens, True)
+        # 2. COLISÃO COM ITENS (Também Pixel-Perfect)
+        itens_coletados = pygame.sprite.spritecollide(self.jogador, self.grupo_itens, True, collided=pygame.sprite.collide_mask)
+        
         for item in itens_coletados:
             if item.tipo == "waffle": 
                 self.pontos_score += 1 
-                # REMOVIDO: self.criar_popup("+10 PONTOS", (255, 255, 0)) 
-            
+                
             elif item.tipo == "cafe": 
                 self.conta_cafe += 1
-                # REMOVIDO: self.criar_popup("+1 CAFE", (139, 69, 19)) 
-                
+                # Regra: A cada 5 cafés = Ganha Escudo
                 if self.conta_cafe > 0 and self.conta_cafe % 5 == 0:
                     self.jogador.tem_escudo = True
-                    # REMOVIDO: self.criar_popup("ESCUDO ATIVO!", (0, 0, 255)) 
-            
+                    
             elif item.tipo == "luzes": 
-                self.conta_luzes += 1 
-                # REMOVIDO: self.criar_popup("+1 LUZ", (255, 255, 255)) 
+                self.conta_luzes += 1
 
     def desenhar_fundo(self, tela):
+        """Desenha o cenário em loop (efeito infinito)."""
         if self.tem_fundo:
             fundo = self.img_fundo_invertido if self.mundo_invertido else self.img_fundo_normal
+            # Desenha duas vezes para cobrir o buraco quando a imagem anda
             tela.blit(fundo, (self.posicao_fundo, 0))
             tela.blit(fundo, (self.posicao_fundo + LARGURA_TELA, 0))
         else:
             tela.fill(VERMELHO_MUNDO if self.mundo_invertido else VERDE_CIN)
             
     def desenhar_sprites(self, tela):
+        """Desenha todos os grupos na tela."""
         self.grupo_jogador.draw(tela)
         self.grupo_obstaculos.draw(tela)
         self.grupo_itens.draw(tela)
-
+        
+        # Desenha o escudo visualmente se o jogador tiver
         if self.jogador.tem_escudo:
-            centro = self.jogador.rect.center
-            pygame.draw.circle(tela, MARROM, centro, 90, 5)
+            pygame.draw.circle(tela, MARROM, self.jogador.rect.center, 120, 5)
 
     def desenhar_hud_e_game_over(self, tela):
-        texto = f"SCORE: {self.pontos_score}  |  VIDAS: {self.jogador.vidas}  |  LUZES: {self.conta_luzes}/10"
+        """Desenha a interface do usuário (HUD) e tela de fim de jogo."""
+        
+        # --- HUD (PLACAR) ---
+        texto = f"SCORE: {self.pontos_score}   |   VIDAS: {self.jogador.vidas}   |   LUZES: {self.conta_luzes}/5"
         
         sombra = self.fonte.render(texto, True, PRETO)
         frente = self.fonte.render(texto, True, BRANCO)
-        
-        tela.blit(sombra, (23, 23))
+        tela.blit(sombra, (23, 23)) # Sombra deslocada
         tela.blit(frente, (20, 20))
         
+        # --- POPUPS FLUTUANTES ---
         for popup in self.textos_flutuantes:
             surf = self.fonte_popup.render(popup['texto'], True, popup['cor'])
             sombra_p = self.fonte_popup.render(popup['texto'], True, PRETO)
@@ -308,12 +336,16 @@ class GerenciadorJogo:
             tela.blit(sombra_p, (rect.x + 2, rect.y + 2))
             tela.blit(surf, rect)
 
+        # --- TIMER DO MUNDO INVERTIDO ---
         if self.mundo_invertido:
+            # Calcula quantos segundos faltam
             tempo = (TEMPO_MUNDO_INVERTIDO - (pygame.time.get_ticks() - self.momento_entrada_invertido)) // 1000
             txt_timer = self.fonte.render(f"RETORNO EM: {tempo}s", True, (255, 0, 0))
             tela.blit(txt_timer, (LARGURA_TELA//2 - txt_timer.get_width()//2, 100))
 
+        # --- TELA DE GAME OVER ---
         if self.game_over:
+            # Fundo escuro transparente
             s = pygame.Surface((LARGURA_TELA, ALTURA_TELA))
             s.set_alpha(200); s.fill(PRETO); tela.blit(s, (0,0))
             
@@ -321,6 +353,7 @@ class GerenciadorJogo:
             t2 = self.fonte.render(f"Score Final: {self.pontos_score}", True, AMARELO)
             t3 = self.fonte.render("ESC para Menu | R para Reiniciar", True, BRANCO)
             
+            # Centraliza textos
             tela.blit(t1, (LARGURA_TELA//2 - t1.get_width()//2, ALTURA_TELA//2 - 100))
             tela.blit(t2, (LARGURA_TELA//2 - t2.get_width()//2, ALTURA_TELA//2))
             tela.blit(t3, (LARGURA_TELA//2 - t3.get_width()//2, ALTURA_TELA//2 + 80))

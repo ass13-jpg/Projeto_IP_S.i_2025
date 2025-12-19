@@ -17,7 +17,7 @@ class Jogador(Entidade):
             # Mantém 'ellen.png' se não tiver a constante dela
             arquivo = IMAGEM_BASE_ELLEN + ".png"
             
-        super().__init__(100, NIVEL_CHAO - 50, 180, 400, arquivo)
+        super().__init__(100, NIVEL_CHAO - 50, 230, 420, arquivo)
         
         self.velocidade_y = 0
         self.vidas = VIDAS_INICIAIS 

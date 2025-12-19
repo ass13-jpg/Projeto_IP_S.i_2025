@@ -5,7 +5,7 @@
 # Obstáculos
 IMAGEM_DEMODOG = 'demodog.png'
 IMAGEM_CADEIRA = 'cadeira.png' 
-
+IMAGEM_DEMOGORGON = 'demogorgon.png'
 # Coletáveis
 IMAGEM_WAFFLE = 'waffle.png'
 IMAGEM_CAFE = 'cafe.png'
